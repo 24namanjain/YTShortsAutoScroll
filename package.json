@@ -1,0 +1,34 @@
+{
+  "name": "youtube-shorts-auto-scroller",
+  "version": "1.0.0",
+  "description": "Auto-scrolls YouTube Shorts after videos end with smart pause features and beautiful Material UI",
+  "main": "src/js/content.js",
+  "scripts": {
+    "build": "echo 'No build process needed for Chrome extension'",
+    "test": "echo 'Test by loading extension in Chrome'",
+    "lint": "echo 'Consider adding ESLint for code quality'"
+  },
+  "keywords": [
+    "chrome-extension",
+    "youtube",
+    "shorts",
+    "auto-scroll",
+    "material-ui",
+    "manifest-v3"
+  ],
+  "author": "Naman Jain",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/24namanjain/youtube-shorts-auto-scroller.git"
+  },
+  "bugs": {
+    "url": "https://github.com/24namanjain/youtube-shorts-auto-scroller/issues"
+  },
+  "homepage": "https://github.com/24namanjain/youtube-shorts-auto-scroller#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+} 

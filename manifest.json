@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "YTShortsFlow",
+  "version": "1.0",
+  "description": "Auto-scrolls YouTube Shorts after the video ends or after a specified time. Includes a glassy UI for settings.",
+  "permissions": ["storage", "scripting"],
+  "host_permissions": ["https://www.youtube.com/shorts/*"],
+  "background": {
+    "service_worker": "src/js/background.js"
+  },
+  "action": {
+    "default_popup": "src/html/popup.html",
+    "default_icon": {
+      "16": "assets/icons/autoplay_16dp_E3E3E3_FILL0_wght400_GRAD0_opsz20.png",
+      "48": "assets/icons/autoplay_48dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png",
+      "128": "assets/icons/autoplay_128dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/shorts/*"],
+      "js": ["src/js/content.js"]
+    }
+  ]
+} 
