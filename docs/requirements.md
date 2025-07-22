@@ -15,7 +15,7 @@
 
 ## 2. Chrome/Store Requirements
 - Manifest V3 compliance
-- Only request minimal permissions: `storage`, `scripting`, and host permissions for Shorts
+- Only request minimal permissions: `storage`, and host permissions for Shorts
 - Provide 16x16, 48x48, 128x128 icons
 - Include a privacy policy (no data collection)
 - README, LICENSE, and store listing documentation
