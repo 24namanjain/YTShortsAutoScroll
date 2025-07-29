@@ -1,6 +1,6 @@
 {
   "name": "youtube-shorts-auto-scroller",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Auto-scrolls YouTube Shorts after videos end with smart pause features and beautiful Material UI",
   "main": "src/js/content.js",
   "scripts": {

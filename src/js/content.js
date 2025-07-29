@@ -115,13 +115,13 @@ function pauseAutoScroll(reason) {
   if (reason === 'hover') {
     if (pauseOnHover) {
       isPausedByHover = true;
-      showPauseToast();
+      showToast('⏸️ Auto-scroll paused while hovering', 2000);
     }
   } else if (reason === 'focus') {
     isPausedByFocus = true;
-    showPauseToast();
+    showToast('⏸️ Auto-scroll paused (tab not focused)', 2000);
   } else if (reason === 'comments') {
-    showToast('⏸️ Waiting for comments panel to close...');
+    showToast('⏸️ Waiting for comments panel to close...', 2000);
   }
 }
 function resumeAutoScroll(reason) {
@@ -134,7 +134,7 @@ function resumeAutoScroll(reason) {
   if (!isAutoScrollPaused()) {
     hideToast();
   } else {
-    showPauseToast();
+    showToast('⏸️ Auto-scroll paused, click to resume', 2000);
   }
 }
 function isAutoScrollPaused() {
@@ -142,9 +142,9 @@ function isAutoScrollPaused() {
 }
 function showPauseToast() {
   if (isPausedByHover) {
-    showToast('⏸️ Auto-scroll paused while hovering');
+    showToast('⏸️ Auto-scroll paused while hovering', 2000);
   } else if (isPausedByFocus) {
-    showToast('⏸️ Auto-scroll paused (tab not focused)');
+    showToast('⏸️ Auto-scroll paused (tab not focused)', 2000);
   }
 }
 
@@ -193,6 +193,56 @@ window.addEventListener('blur', () => {
 window.addEventListener('focus', () => {
   if (onlyWhenFocused) resumeAutoScroll('focus');
 });
+
+// --- Keyboard Arrow Event for Comments Panel ---
+(function setupArrowKeyCommentsControl() {
+  document.addEventListener('keydown', function(e) {
+    // Ignore if typing in input/textarea or using modifier keys
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.ctrlKey || e.altKey || e.metaKey) return;
+    // Right Arrow: Open comments
+    if (e.key === 'ArrowRight') {
+      if (!isCommentsPanelOpen()) {
+        // Try to find and click the comments button
+        let commentsBtn = document.querySelector('#comments-button button');
+        if (!commentsBtn) {
+          commentsBtn = document.querySelector('button[aria-label^="View"][aria-label$="comments"]');
+        }
+        if (!commentsBtn) {
+          commentsBtn = document.querySelector('button[aria-label="Comments"], button[aria-label="Show comments"]');
+        }
+        if (commentsBtn) {
+          commentsBtn.click();
+          showToast('💬 Opening comments...', 2000);
+        } else {
+          showToast('❓ Comments button not found', 2000);
+        }
+      }
+    }
+    // Left Arrow: Close comments
+    if (e.key === 'ArrowLeft') {
+      if (isCommentsPanelOpen()) {
+        // Try to find and click the close button in the comments panel
+        let closeBtn = document.querySelector('ytd-engagement-panel-section-list-renderer[shorts-panel][visibility="ENGAGEMENT_PANEL_VISIBILITY_EXPANDED"] button[aria-label="Close"]');
+        if (!closeBtn) {
+          // Fallback: try clicking the comments button again if it toggles
+          closeBtn = document.querySelector('#comments-button button');
+        }
+        if (!closeBtn) {
+          closeBtn = document.querySelector('button[aria-label^="View"][aria-label$="comments"]');
+        }
+        if (!closeBtn) {
+          closeBtn = document.querySelector('button[aria-label="Comments"], button[aria-label="Show comments"]');
+        }
+        if (closeBtn) {
+          closeBtn.click();
+          showToast('❌ Closing comments...', 2000);
+        } else {
+          showToast('❓ Close button not found', 2000);
+        }
+      }
+    }
+  }, true);
+})();
 
 // --- Main Observer Logic ---
 // Observe the Shorts video and attach event listeners for auto-scroll
@@ -325,7 +375,7 @@ function scrollToNextShort() {
       const btn = navDown.querySelector('button[aria-label="Next video"]');
       if (btn) {
         console.log('[YTShortAutoScroll] Next button found, clicking:', btn);
-        showToast('🚀 Zooming to the next Short!');
+        showToast('🚀 Zooming to the next Short!', 2000);
         setTimeout(() => {
           btn.click();
           console.log('[YTShortAutoScroll] Moved to next short. Will re-attach listeners.');
@@ -353,7 +403,7 @@ function scrollToNextShort() {
 
 // --- Toast Notification ---
 // Shows a toast message in the bottom right
-function showToast(message) {
+function showToast(message, timeout) {
   let toast = document.getElementById('yt-short-autoscroll-toast');
   if (!toast) {
     toast = document.createElement('div');
@@ -396,6 +446,9 @@ function showToast(message) {
   toast.textContent = message;
   toast.style.display = 'block';
   setTimeout(() => { toast.style.opacity = '1'; }, 10);
+  if (typeof timeout === 'number' && timeout > 0) {
+    setTimeout(() => { hideToast(); }, timeout);
+  }
 }
 
 // Hides the toast

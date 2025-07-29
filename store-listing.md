@@ -1,80 +1,63 @@
-# Chrome Web Store Listing
+# YTShortsFlow
 
-## Extension Name
-YTShortsFlow
-
-## Short Description
 Effortless, hands-free YouTube Shorts scrolling with YTShortsFlow!
 
-## Detailed Description
-🎬 **Never Stop Scrolling!** 
+## 🎬 Never Stop Scrolling!
 
 Transform your YouTube Shorts experience with this intelligent auto-scroller that automatically moves to the next Short when the current one ends. Perfect for binge-watching sessions!
 
-**✨ Key Features:**
-• **Smart Auto-Scroll** - Automatically jumps to the next Short when video ends
-• **Pause on Hover** - Hover over the video to pause auto-scroll
-• **Tab Focus Aware** - Only auto-scrolls when you're actually watching
-• **Comments Friendly** - Pauses when comments panel is open
-• **Beautiful UI** - Clean Material Design popup with easy controls
-• **Toast Notifications** - Fun feedback when jumping between Shorts
+## ✨ Key Features
 
-**🎯 Perfect For:**
-• Endless YouTube Shorts browsing
-• Background watching while multitasking
-• Discovering new content seamlessly
-• Hands-free Shorts consumption
+- **🎬 Smart Auto-Scroll:** Jumps to the next Short when the video ends or progress bar completes  
+- **💡 Keyboard Shortcuts:** Use right arrow to open comments, left arrow to close comments  
+- **⏲️ Customizable Toast Duration:** Toast notifications now auto-hide after a set time (default 2s)  
+- **🎪 Fun Toast Notifications:** Get a little celebration when it jumps to the next video  
+- **⏸️ Smart Pause Options:**  
+  - Pause on hover (optional)  
+  - Pause when comments panel is open  
+  - Pause when tab loses focus (optional)  
+- **🎨 Beautiful UI:** Clean Material Design popup with tips, responsive layout, and light/dark mode support  
+- **🛡️ Privacy Respecting:** No data collection, open source, Manifest V3 compliant  
 
-**⚡ How It Works:**
-1. Install the extension
-2. Open any YouTube Short
-3. Watch and enjoy - it automatically scrolls to the next one!
-4. Use the popup to customize settings
+## 🎯 Perfect For
 
-**🔧 Smart Features:**
-• Detects when videos end or progress bar completes
-• Pauses on hover for reading comments
-• Only works when tab is focused (optional)
-• Settings persist across browser sessions
-• Works with YouTube's dynamic interface
+- Endless YouTube Shorts browsing  
+- Background watching while multitasking  
+- Discovering new content seamlessly  
+- Hands-free Shorts consumption  
 
-**🎨 Beautiful Design:**
-• Material Design UI components
-• Glassy, modern interface
-• Responsive design
-• Dark/light mode adaptive
+## ⚙️ How It Works
 
-**🛡️ Privacy & Security:**
-• No data collection
-• Only works on YouTube Shorts pages
-• Open source and transparent
-• Manifest V3 compliant
+1. Install the extension  
+2. Open any YouTube Short  
+3. Watch and enjoy — it automatically scrolls to the next one!  
+4. Use the popup to customize settings  
 
-**🚀 Ready to enhance your YouTube Shorts experience? Install now and never manually scroll again!**
+## 🔧 Smart Features
 
-## Category
-Productivity
+- Detects when videos end or progress bar completes  
+- Keyboard shortcuts for toggling comments panel  
+- Auto-scroll can pause based on hover, focus, or comments  
+- Settings persist across sessions  
+- Works with YouTube’s dynamic interface  
 
-## Language
-English
+## 🆕 What's New in Version 1.1.0 (2025-05-29)
 
-## Screenshots
-- Popup UI: ![Popup Screenshot](samples/png/ytshortsflow-popup.png)
-- Auto-scroll Toast: ![Auto-scroll Screenshot](samples/png/ytshortsflow-autoscroll.png)
-- Demo 1 (GIF): ![Demo 1 GIF](samples/gif/ytshortsflow-demo-1.gif)
-- Demo 2 (GIF): ![Demo 2 GIF](samples/gif/ytshortsflow-demo-2.gif)
-- Demo 1 (mov): [ytshortsflow-demo-1.mov](samples/mov/ytshortsflow-demo-1.mov)
-- Demo 2 (mov): [ytshortsflow-demo-2.mov](samples/mov/ytshortsflow-demo-2.mov)
-- **Credit:** Demo video based on [this YouTube Short](https://www.youtube.com/shorts/GfkL1G0VFgA)
+### Added
+- Keyboard shortcuts: ➡️ Right arrow opens comments, ⬅️ Left arrow closes comments
+- Customizable toast duration with auto-hide (default: 2s)
+- Improved detection of the comments button
 
-## Promotional Images
-- Use the above screenshots, GIFs, and demo videos for Chrome Web Store promotional images.
+## 🛡️ Privacy Policy
 
-## Privacy Policy
-This extension does not collect, store, or transmit any personal data. It only interacts with YouTube Shorts pages to provide auto-scrolling functionality.
+This extension does **not** collect, store, or transmit any personal data. It only interacts with YouTube Shorts pages for auto-scrolling functionality.
 
-## Support
-For support, feature requests, or bug reports, please visit our GitHub repository or contact us through the Chrome Web Store.
+## 📬 Support
 
-## Keywords
-youtube shorts, auto scroll, auto play, video player, youtube extension, shorts browser, video automation, youtube tools, productivity, video streaming 
+For issues or feature requests, open an issue on the [GitHub repository](https://github.com/24namanjain/YTShortsAutoScroll) or contact via the Chrome Web Store support tab.
+
+---
+
+> Version: **1.1.0**  
+> License: Creative Commons Attribution-NonCommercial 4.0 International Public License (CC BY-NC 4.0)  
+> Author: Naman Jain  

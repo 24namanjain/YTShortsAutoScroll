@@ -41,6 +41,8 @@ This extension is like having a personal assistant that knows exactly when you'r
 
 ### 🎯 Key Features
 - **🎬 Smart Auto-Scroll:** Jumps to the next Short when the video ends or progress bar completes
+- **💡 Keyboard Shortcuts:** Use right arrow to open comments, left arrow to close comments
+- **⏲️ Customizable Toast Duration:** Toast notifications now auto-hide after a set time (default 2s)
 - **🎪 Fun Toast Notifications:** Get a little celebration when it jumps to the next video
 - **⏸️ Smart Pause Options:** 
   - Pause on hover (optional)

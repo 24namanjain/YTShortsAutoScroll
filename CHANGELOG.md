@@ -33,3 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MutationObserver for DOM detection
 - Chrome Storage API integration
 - Service worker background script 
+
+## [1.1.0] - 2025-05-29
+
+### Added
+- Keyboard shortcuts: Right arrow opens comments, Left arrow closes comments
+- Parameterized toast duration (showToast now accepts a timeout)
+- Improved comments button detection for YouTube Shorts
+
+### Changed
+- Updated manifest and package version to 1.1.0 
