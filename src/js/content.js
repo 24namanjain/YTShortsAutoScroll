@@ -110,7 +110,12 @@ chrome.storage.sync.get({
 });
 
 // --- Pause/Resume Logic ---
-// Pause auto-scroll on hover, tab focus, or comments panel
+
+/**
+ * Pauses auto-scroll for a given reason (hover, focus, or comments).
+ * Shows a toast notification for the pause reason.
+ * @param {('hover'|'focus'|'comments')} reason - The reason for pausing auto-scroll.
+ */
 function pauseAutoScroll(reason) {
   if (reason === 'hover') {
     if (pauseOnHover) {
@@ -124,6 +129,12 @@ function pauseAutoScroll(reason) {
     showToast('⏸️ Waiting for comments panel to close...', 2000);
   }
 }
+
+/**
+ * Resumes auto-scroll for a given reason (hover or focus).
+ * Hides the toast if no pause reason is active.
+ * @param {('hover'|'focus')} reason - The reason for resuming auto-scroll.
+ */
 function resumeAutoScroll(reason) {
   if (reason === 'hover') {
     isPausedByHover = false;
@@ -137,9 +148,18 @@ function resumeAutoScroll(reason) {
     showToast('⏸️ Auto-scroll paused, click to resume', 2000);
   }
 }
+
+/**
+ * Returns whether auto-scroll is currently paused for any reason.
+ * @returns {boolean} True if paused by hover or focus, false otherwise.
+ */
 function isAutoScrollPaused() {
   return isPausedByHover || isPausedByFocus;
 }
+
+/**
+ * Shows a pause toast for the current pause reason.
+ */
 function showPauseToast() {
   if (isPausedByHover) {
     showToast('⏸️ Auto-scroll paused while hovering', 2000);
@@ -148,7 +168,10 @@ function showPauseToast() {
   }
 }
 
-// Attach hover listeners to pause/resume auto-scroll
+/**
+ * Attaches hover listeners to the video and toast to pause/resume auto-scroll on hover.
+ * Removes previous listeners before attaching new ones.
+ */
 function setupHoverPause() {
   const video = document.querySelector('video');
   let toast = document.getElementById('yt-short-autoscroll-toast');
@@ -245,7 +268,12 @@ window.addEventListener('focus', () => {
 })();
 
 // --- Main Observer Logic ---
-// Observe the Shorts video and attach event listeners for auto-scroll
+
+/**
+ * Observes the Shorts video and attaches event listeners for auto-scroll.
+ * Cleans up previous listeners and intervals, and sets up new ones for the current video.
+ * @param {boolean} [force=false] - If true, always re-attach listeners even if the video src hasn't changed.
+ */
 function observeShort(force = false) {
   const video = document.querySelector('video');
   if (!video) {
@@ -277,6 +305,10 @@ function observeShort(force = false) {
   }
 
   // Handler to move to next short and cleanup
+  /**
+   * Moves to the next Short and cleans up listeners/intervals.
+   * @param {string} reason - The reason for moving to the next Short.
+   */
   const moveNext = (reason) => {
     if (endedListener) {
       video.removeEventListener('ended', endedListener);
@@ -342,18 +374,30 @@ function observeShort(force = false) {
 }
 
 // --- Comments Panel Detection ---
-// Prevent auto-scroll if the comments panel is open
+
+/**
+ * Returns true if the comments panel is currently open in Shorts view.
+ * @returns {boolean} True if comments panel is open, false otherwise.
+ */
 function isCommentsPanelOpen() {
   return !!document.querySelector('ytd-engagement-panel-section-list-renderer[shorts-panel][visibility="ENGAGEMENT_PANEL_VISIBILITY_EXPANDED"]');
 }
 
 // --- Main Scroll Logic ---
-// Tries to click the Next button, with a fun toast and delay
+
+/**
+ * Attempts to click the Next button to move to the next Short.
+ * Waits for comments panel to close if needed, and shows a toast notification.
+ * Retries for up to 6 seconds if the button is not found.
+ */
 function scrollToNextShort() {
   let attempts = 0;
   const maxAttempts = 12; // 12 * 500ms = 6 seconds
   let waitingForComments = false;
 
+  /**
+   * Tries to find and click the Next button, or waits for comments panel to close.
+   */
   function tryClick() {
     if (pauseOnComments && isCommentsPanelOpen()) {
       if (!waitingForComments) {
@@ -402,7 +446,13 @@ function scrollToNextShort() {
 }
 
 // --- Toast Notification ---
-// Shows a toast message in the bottom right
+
+/**
+ * Shows a toast message in the bottom right of the screen.
+ * Creates the toast element if it doesn't exist, and adapts to light/dark theme.
+ * @param {string} message - The message to display in the toast.
+ * @param {number} [timeout] - Optional timeout in ms to auto-hide the toast.
+ */
 function showToast(message, timeout) {
   let toast = document.getElementById('yt-short-autoscroll-toast');
   if (!toast) {
@@ -451,7 +501,9 @@ function showToast(message, timeout) {
   }
 }
 
-// Hides the toast
+/**
+ * Hides the toast notification if it is visible.
+ */
 function hideToast() {
   const toast = document.getElementById('yt-short-autoscroll-toast');
   if (toast) {
@@ -461,7 +513,11 @@ function hideToast() {
 }
 
 // --- Shorts Container Observer ---
-// Observes the Shorts area for navigation and attaches observers to new videos
+
+/**
+ * Observes the Shorts area for navigation changes and attaches observers to new videos.
+ * Uses a MutationObserver to detect navigation and re-attach listeners as needed.
+ */
 function setupShortsMutationObserver() {
   const shortsArea = document.querySelector('ytd-reel-video-renderer')?.parentElement || document.querySelector('ytd-reel-video-renderer') || document.body;
   if (!shortsArea) {
@@ -477,4 +533,4 @@ function setupShortsMutationObserver() {
   // Initial call
   observeShort(true);
 }
-setupShortsMutationObserver(); 
+setupShortsMutationObserver();
