@@ -15,7 +15,7 @@
  * @property {boolean} pauseOnComments - Pause auto-scroll when comments panel is open
  * @property {boolean} enableArrowComments - Enable ⬅️/➡️ to open/close comments
  */
-const settings = {
+const userPreferences = {
   enabled: true,
   onlyWhenFocused: false,
   pauseOnHover: true,
@@ -24,40 +24,34 @@ const settings = {
 };
 
 // --- Internal State Variables ---
-let lastVideoSrc = null;           // Track the current video by src
-let endedListener = null;          // Reference to the video ended event listener
-let progressInterval = null;       // Interval for polling the progress bar
-let videoEndPoll = null;           // Interval for polling video end
-let isPausedByHover = false;       // Pause state for hover
-let isPausedByFocus = false;       // Pause state for tab focus
+let lastVideoSrc = null;           // Current video src
+let endedListener = null;          // Video ended event listener reference
+let progressInterval = null;       // Progress bar polling interval
+let videoEndPoll = null;           // Video end polling interval
+let isPausedByHover = false;       // True if paused by hover
+let isPausedByFocus = false;       // True if paused by tab focus
 let hoverHandlers = { video: null, toast: null }; // Hover event handler references
 
 // --- Debug Utilities (for manual testing) ---
 window._ytShortsAutoScrollDebug = {
-  getSettings: () => ({ ...settings }),
-  setSetting: (key, value) => { settings[key] = value; },
+  getSettings: () => ({ ...userPreferences }),
+  setSetting: (key, value) => { userPreferences[key] = value; },
   observeShort
 };
 
 // --- Settings Sync and Messaging ---
 
 // --- Centralized Settings Update and Validation ---
-const defaultSettings = {
-  enabled: true,
-  onlyWhenFocused: false,
-  pauseOnHover: true,
-  pauseOnComments: true,
-  enableArrowComments: true
-};
+const defaultSettings = { ...userPreferences };
 
 function validateAndApplySettings(data) {
   // Runtime validation for settings
   for (const key in defaultSettings) {
     if (typeof data[key] !== typeof defaultSettings[key]) {
       console.warn(`[YTShortAutoScroll] Invalid type for setting '${key}', using default:`, defaultSettings[key]);
-      settings[key] = defaultSettings[key];
+      userPreferences[key] = defaultSettings[key];
     } else {
-      settings[key] = data[key];
+      userPreferences[key] = data[key];
     }
   }
 }
@@ -66,18 +60,18 @@ function updateSettingsFromStorage(callback) {
   chrome.storage.sync.get(defaultSettings, (data) => {
     validateAndApplySettings(data);
     if (typeof callback === 'function') callback();
-    if (settings.enabled) observeShort(true);
+    if (userPreferences.enabled) observeShort(true);
   });
 }
 
-// Listen for messages from the popup to enable/disable and update settings
+// Listen for messages from the popup to update settings
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   let changed = false;
   if (msg.type === 'TOGGLE_ENABLED') {
-    if (settings.enabled !== msg.enabled) changed = true;
-    settings.enabled = msg.enabled;
-    console.log('[YTShortAutoScroll] Received TOGGLE_ENABLED:', settings.enabled);
-    if (!settings.enabled) {
+    if (userPreferences.enabled !== msg.enabled) changed = true;
+    userPreferences.enabled = msg.enabled;
+    console.log('[YTShortAutoScroll] Received TOGGLE_ENABLED:', userPreferences.enabled);
+    if (!userPreferences.enabled) {
       stopAllObservers();
       console.log('[YTShortAutoScroll] Auto-scroll disabled.');
     } else {
@@ -88,19 +82,17 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'UPDATE_SETTINGS') {
     // Only update if changed
     for (const key in defaultSettings) {
-      if (typeof msg[key] !== 'undefined' && settings[key] !== msg[key]) {
-        settings[key] = msg[key];
+      if (typeof msg[key] !== 'undefined' && userPreferences[key] !== msg[key]) {
+        userPreferences[key] = msg[key];
         changed = true;
       }
     }
     // If hover pause is disabled, clear any existing hover pause
-    if (!settings.pauseOnHover && isPausedByHover) {
+    if (!userPreferences.pauseOnHover && isPausedByHover) {
       isPausedByHover = false;
-      if (!isAutoScrollPaused()) {
-        Toast.hide();
-      }
+      if (!PauseResume.isPaused()) Toast.hide();
     }
-    if (settings.enabled) {
+    if (userPreferences.enabled) {
       observeShort(true);
       console.log('[YTShortAutoScroll] Settings updated and auto-scroll enabled.');
     } else {
@@ -109,31 +101,31 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     }
   }
   if (msg.type === 'TOGGLE_ONLY_WHEN_FOCUSED') {
-    if (settings.onlyWhenFocused !== msg.onlyWhenFocused) changed = true;
-    settings.onlyWhenFocused = msg.onlyWhenFocused;
-    console.log('[YTShortAutoScroll] Received TOGGLE_ONLY_WHEN_FOCUSED:', settings.onlyWhenFocused);
+    if (userPreferences.onlyWhenFocused !== msg.onlyWhenFocused) changed = true;
+    userPreferences.onlyWhenFocused = msg.onlyWhenFocused;
+    console.log('[YTShortAutoScroll] Received TOGGLE_ONLY_WHEN_FOCUSED:', userPreferences.onlyWhenFocused);
   }
   if (msg.type === 'TOGGLE_PAUSE_ON_HOVER') {
-    if (settings.pauseOnHover !== msg.pauseOnHover) changed = true;
-    settings.pauseOnHover = msg.pauseOnHover;
-    console.log('[YTShortAutoScroll] Received TOGGLE_PAUSE_ON_HOVER:', settings.pauseOnHover);
+    if (userPreferences.pauseOnHover !== msg.pauseOnHover) changed = true;
+    userPreferences.pauseOnHover = msg.pauseOnHover;
+    console.log('[YTShortAutoScroll] Received TOGGLE_PAUSE_ON_HOVER:', userPreferences.pauseOnHover);
     // If hover pause is disabled, clear any existing hover pause
-    if (!settings.pauseOnHover && isPausedByHover) {
+    if (!userPreferences.pauseOnHover && isPausedByHover) {
       isPausedByHover = false;
-      if (!isAutoScrollPaused()) {
+      if (!PauseResume.isPaused()) {
         Toast.hide();
       }
     }
-    setupHoverPause();
+    PauseResume.setupHoverPause();
   }
   if (msg.type === 'TOGGLE_PAUSE_ON_COMMENTS') {
-    if (settings.pauseOnComments !== msg.pauseOnComments) changed = true;
-    settings.pauseOnComments = msg.pauseOnComments;
-    console.log('[YTShortAutoScroll] Received TOGGLE_PAUSE_ON_COMMENTS:', settings.pauseOnComments);
+    if (userPreferences.pauseOnComments !== msg.pauseOnComments) changed = true;
+    userPreferences.pauseOnComments = msg.pauseOnComments;
+    console.log('[YTShortAutoScroll] Received TOGGLE_PAUSE_ON_COMMENTS:', userPreferences.pauseOnComments);
   }
   // Optionally: log if settings changed
   if (changed) {
-    console.log('[YTShortAutoScroll] Settings changed:', { ...settings });
+    console.log('[YTShortAutoScroll] Settings changed:', { ...userPreferences });
   }
 });
 
@@ -150,27 +142,36 @@ function stopAllObservers() {
 // Initial settings load
 updateSettingsFromStorage();
 
-// (Removed duplicate settings load, now handled by updateSettingsFromStorage)
+// (No duplicate settings load; handled by updateSettingsFromStorage)
 
 
 // --- Pause/Resume Logic Module ---
 const PauseResume = (() => {
+  // --- Helper for toast messages ---
+  function getPauseToastMessage(reason) {
+    switch (reason) {
+      case 'hover': return '⏸️ Auto-scroll paused while hovering';
+      case 'focus': return '⏸️ Auto-scroll paused (tab not focused)';
+      case 'comments': return '⏸️ Waiting for comments panel to close...';
+      case 'resume': return '⏸️ Auto-scroll paused, click to resume';
+      default: return '';
+    }
+  }
+
   /**
    * Pauses auto-scroll for a given reason (hover, focus, or comments).
    * Shows a toast notification for the pause reason.
    * @param {('hover'|'focus'|'comments')} reason - The reason for pausing auto-scroll.
    */
   function pause(reason) {
-    if (reason === 'hover') {
-      if (settings.pauseOnHover) {
-        isPausedByHover = true;
-        Toast.show('⏸️ Auto-scroll paused while hovering', 2000);
-      }
+    if (reason === 'hover' && userPreferences.pauseOnHover) {
+      isPausedByHover = true;
+      Toast.show(getPauseToastMessage('hover'));
     } else if (reason === 'focus') {
       isPausedByFocus = true;
-      Toast.show('⏸️ Auto-scroll paused (tab not focused)', 2000);
+      Toast.show(getPauseToastMessage('focus'), 2000);
     } else if (reason === 'comments') {
-      Toast.show('⏸️ Waiting for comments panel to close...', 2000);
+      Toast.show(getPauseToastMessage('comments'));
     }
   }
 
@@ -185,11 +186,11 @@ const PauseResume = (() => {
     } else if (reason === 'focus') {
       isPausedByFocus = false;
     }
-    // Only hide the toast if no pause reason is active
+    // Hide the toast if no pause reason is active
     if (!PauseResume.isPaused()) {
       Toast.hide();
     } else {
-      Toast.show('⏸️ Auto-scroll paused, click to resume', 2000);
+      Toast.show(getPauseToastMessage('resume'), 2000);
     }
   }
 
@@ -203,13 +204,10 @@ const PauseResume = (() => {
 
   /**
    * Shows a pause toast for the current pause reason.
+   * (No-op: This is now handled by pause() and resume() directly. Kept for API compatibility.)
    */
   function showPauseToast() {
-    if (isPausedByHover) {
-      Toast.show('⏸️ Auto-scroll paused while hovering', 2000);
-    } else if (isPausedByFocus) {
-      Toast.show('⏸️ Auto-scroll paused (tab not focused)', 2000);
-    }
+    // No-op: handled by pause() and resume() to avoid duplicate toasts.
   }
 
   /**
@@ -218,7 +216,7 @@ const PauseResume = (() => {
    */
   function setupHoverPause() {
     const video = document.querySelector('video');
-    let toast = document.getElementById('yt-short-autoscroll-toast');
+    const toast = document.getElementById('yt-short-autoscroll-toast');
 
     // Remove previous listeners if any
     if (hoverHandlers.video && video) {
@@ -230,16 +228,16 @@ const PauseResume = (() => {
       toast.removeEventListener('mouseleave', hoverHandlers.toast.mouseleave);
     }
 
-    if (!settings.pauseOnHover) {
+    if (!userPreferences.pauseOnHover) {
       hoverHandlers = { video: null, toast: null };
       return;
     }
 
     // Define handlers
-    const videoEnter = () => { PauseResume.pause('hover'); };
-    const videoLeave = () => { PauseResume.resume('hover'); };
-    const toastEnter = () => { PauseResume.pause('hover'); };
-    const toastLeave = () => { PauseResume.resume('hover'); };
+    const videoEnter = () => PauseResume.pause('hover');
+    const videoLeave = () => PauseResume.resume('hover');
+    const toastEnter = () => PauseResume.pause('hover');
+    const toastLeave = () => PauseResume.resume('hover');
 
     if (video) {
       video.addEventListener('mouseenter', videoEnter);
@@ -259,30 +257,26 @@ const PauseResume = (() => {
 // --- Focus Pause Module ---
 (function FocusPauseModule() {
   window.addEventListener('blur', () => {
-    if (settings.onlyWhenFocused) PauseResume.pause('focus');
+    if (userPreferences.onlyWhenFocused) PauseResume.pause('focus');
   });
   window.addEventListener('focus', () => {
-    if (settings.onlyWhenFocused) PauseResume.resume('focus');
+    if (userPreferences.onlyWhenFocused) PauseResume.resume('focus');
   });
 })();
 
 // --- Arrow Key Comments Control Module ---
 (function ArrowKeyCommentsModule() {
   document.addEventListener('keydown', function(e) {
-    if (!settings.enableArrowComments) return;
+    if (!userPreferences.enableArrowComments) return;
     // Ignore if typing in input/textarea or using modifier keys
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.ctrlKey || e.altKey || e.metaKey) return;
     // Right Arrow: Open comments
     if (e.key === 'ArrowRight') {
       if (!isCommentsPanelOpen()) {
         // Try to find and click the comments button
-        let commentsBtn = document.querySelector('#comments-button button');
-        if (!commentsBtn) {
-          commentsBtn = document.querySelector('button[aria-label^="View"][aria-label$="comments"]');
-        }
-        if (!commentsBtn) {
-          commentsBtn = document.querySelector('button[aria-label="Comments"], button[aria-label="Show comments"]');
-        }
+        let commentsBtn = document.querySelector('#comments-button button')
+          || document.querySelector('button[aria-label^="View"][aria-label$="comments"]')
+          || document.querySelector('button[aria-label="Comments"], button[aria-label="Show comments"]');
         if (commentsBtn) {
           commentsBtn.click();
           Toast.show('💬 Opening comments...', 2000);
@@ -295,17 +289,10 @@ const PauseResume = (() => {
     if (e.key === 'ArrowLeft') {
       if (isCommentsPanelOpen()) {
         // Try to find and click the close button in the comments panel
-        let closeBtn = document.querySelector('ytd-engagement-panel-section-list-renderer[shorts-panel][visibility="ENGAGEMENT_PANEL_VISIBILITY_EXPANDED"] button[aria-label="Close"]');
-        if (!closeBtn) {
-          // Fallback: try clicking the comments button again if it toggles
-          closeBtn = document.querySelector('#comments-button button');
-        }
-        if (!closeBtn) {
-          closeBtn = document.querySelector('button[aria-label^="View"][aria-label$="comments"]');
-        }
-        if (!closeBtn) {
-          closeBtn = document.querySelector('button[aria-label="Comments"], button[aria-label="Show comments"]');
-        }
+        let closeBtn = document.querySelector('ytd-engagement-panel-section-list-renderer[shorts-panel][visibility="ENGAGEMENT_PANEL_VISIBILITY_EXPANDED"] button[aria-label="Close"]')
+          || document.querySelector('#comments-button button')
+          || document.querySelector('button[aria-label^="View"][aria-label$="comments"]')
+          || document.querySelector('button[aria-label="Comments"], button[aria-label="Show comments"]');
         if (closeBtn) {
           closeBtn.click();
           Toast.show('❌ Closing comments...', 2000);
@@ -382,30 +369,20 @@ function observeShort(force = false) {
 
   // Poll the progress bar for completion (width >= 99%)
   progressInterval = setInterval(() => {
-    // Performance: skip polling if paused
-    if (PauseResume.isPaused()) {
-      // console.log('[YTShortAutoScroll] Progress bar polling paused.');
-      return;
-    }
+    if (PauseResume.isPaused()) return;
     const played = document.querySelector('.ytProgressBarLineProgressBarPlayed');
     if (played) {
-      const widthStr = played.style.width;
-      const width = parseFloat(widthStr);
-      if (!isNaN(width)) {
-        if (width >= 99) {
-          console.log('[YTShortAutoScroll] Progress bar at or above 99%, moving to next short.');
-          moveNext('progress bar');
-        }
+      const width = parseFloat(played.style.width);
+      if (!isNaN(width) && width >= 99) {
+        console.log('[YTShortAutoScroll] Progress bar at or above 99%, moving to next short.');
+        moveNext('progress bar');
       }
     }
   }, 500);
 
   // Fallback: Poll for video end (in case 'ended' event is missed)
   videoEndPoll = setInterval(() => {
-    if (PauseResume.isPaused()) {
-      // console.log('[YTShortAutoScroll] Video end polling paused.');
-      return;
-    }
+    if (PauseResume.isPaused()) return;
     if (video.duration && video.currentTime && (video.duration - video.currentTime < 0.5)) {
       console.log('[YTShortAutoScroll] Video end detected by polling, moving to next short.');
       moveNext('video end poll');
@@ -416,17 +393,15 @@ function observeShort(force = false) {
 }
 
 // --- Comments Panel Detection ---
-
 /**
  * Returns true if the comments panel is currently open in Shorts view.
- * @returns {boolean} True if comments panel is open, false otherwise.
+ * @returns {boolean}
  */
 function isCommentsPanelOpen() {
   return !!document.querySelector('ytd-engagement-panel-section-list-renderer[shorts-panel][visibility="ENGAGEMENT_PANEL_VISIBILITY_EXPANDED"]');
 }
 
 // --- Main Scroll Logic ---
-
 /**
  * Attempts to click the Next button to move to the next Short.
  * Waits for comments panel to close if needed, and shows a toast notification.
@@ -437,13 +412,11 @@ function scrollToNextShort() {
   const maxAttempts = 12; // 12 * 500ms = 6 seconds
   let waitingForComments = false;
 
-  /**
-   * Tries to find and click the Next button, or waits for comments panel to close.
-   */
+  // Tries to find and click the Next button, or waits for comments panel to close.
   function tryClick() {
-    if (settings.pauseOnComments && isCommentsPanelOpen()) {
+    if (userPreferences.pauseOnComments && isCommentsPanelOpen()) {
       if (!waitingForComments) {
-        pauseAutoScroll('comments');
+        PauseResume.pause('comments');
         waitingForComments = true;
       }
       setTimeout(tryClick, 500);
@@ -542,7 +515,7 @@ const Toast = (() => {
     toast.style.display = 'block';
     setTimeout(() => { toast.style.opacity = '1'; }, 10);
     if (typeof timeout === 'number' && timeout > 0) {
-      setTimeout(() => { hide(); }, timeout);
+      setTimeout(hide, timeout);
     }
   }
   /**
@@ -559,13 +532,14 @@ const Toast = (() => {
 })();
 
 // --- Shorts Container Observer ---
-
 /**
  * Observes the Shorts area for navigation changes and attaches observers to new videos.
  * Uses a MutationObserver to detect navigation and re-attach listeners as needed.
  */
 function setupShortsMutationObserver() {
-  const shortsArea = document.querySelector('ytd-reel-video-renderer')?.parentElement || document.querySelector('ytd-reel-video-renderer') || document.body;
+  const shortsArea = document.querySelector('ytd-reel-video-renderer')?.parentElement
+    || document.querySelector('ytd-reel-video-renderer')
+    || document.body;
   if (!shortsArea) {
     console.log('[YTShortAutoScroll] Shorts area not found, retrying...');
     setTimeout(setupShortsMutationObserver, 1000);
