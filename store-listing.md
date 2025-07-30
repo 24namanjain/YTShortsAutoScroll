@@ -9,16 +9,15 @@ Transform your YouTube Shorts experience with this intelligent auto-scroller tha
 ## ✨ Key Features
 
 - **🎬 Smart Auto-Scroll:** Jumps to the next Short when the video ends or progress bar completes  
-- **�️ Double-Skip Prevention:** Robust logic ensures only one skip per video, even if ads or user actions advance the video (prevents double-skipping)  
-- **�💡 Keyboard Shortcuts:** Use right arrow to open comments, left arrow to close comments  
+- **🛡️ Double-Skip Prevention:** Robust logic ensures only one skip per video, even if ads or user actions advance the video (prevents double-skipping)  
+- ** Keyboard Shortcuts:** Use right arrow to open comments, left arrow to close comments  
 - **⏲️ Customizable Toast Duration:** Toast notifications now auto-hide after a set time (default 2s)  
 - **🎪 Fun Toast Notifications:** Get a little celebration when it jumps to the next video  
 - **⏸️ Smart Pause Options:**  
   - Pause on hover (optional)  
   - Pause when comments panel is open  
   - Pause when tab loses focus (optional)  
-- **🎨 Beautiful UI:** Clean Material Design popup with tips, responsive layout, and light/dark mode support  
-- **🛡️ Privacy Respecting:** No data collection, open source, Manifest V3 compliant  
+- **🛡️ Privacy Respecting:** No data collection, open source, Manifest V3 compliant
 
 ## 🎯 Perfect For
 
