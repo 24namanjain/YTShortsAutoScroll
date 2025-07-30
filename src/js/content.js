@@ -29,6 +29,7 @@ let videoEndPoll = null;           // Video end polling interval
 let isPausedByHover = false;       // Pause state for hover
 let isPausedByFocus = false;       // Pause state for tab focus
 let hoverHandlers = { video: null, toast: null }; // Hover event handler refs
+let skipInProgress = false;        // Prevent double-skipping
 
 // == Debug Utilities ==
 window._ytShortsAutoScrollDebug = {
@@ -306,6 +307,7 @@ function observeShort(force = false) {
   }
   console.log('[YTShortAutoScroll] New video detected, setting up observer.');
   lastVideoSrc = video.src;
+  skipInProgress = false; // Reset skip flag for new video
 
   // Remove previous listeners and intervals
   if (endedListener) {
@@ -325,6 +327,11 @@ function observeShort(force = false) {
 
   // Handler to move to next short and cleanup
   const moveNext = (reason) => {
+    if (skipInProgress) {
+      console.log('[YTShortAutoScroll] Skip already in progress, ignoring moveNext.');
+      return;
+    }
+    skipInProgress = true;
     if (endedListener) {
       video.removeEventListener('ended', endedListener);
       endedListener = null;
@@ -421,11 +428,15 @@ function scrollToNextShort() {
       const btn = navDown.querySelector('button[aria-label="Next video"]');
       if (btn) {
         const prevSrc = lastVideoSrc;
-        // If the video src has already changed (ad-blocker/user skip), do not click Next or re-attach
+        // If the video src has already changed (ad-blocker/user skip), do not click Next
         const video = document.querySelector('video');
         if (video && video.src !== prevSrc) {
-          console.log('[YTShortAutoScroll] Video already changed (likely by ad-blocker/user), skipping Next click and not re-attaching listeners.');
+          console.log('[YTShortAutoScroll] Video already changed (likely by ad-blocker/user), skipping Next click but re-attaching listeners.');
           Toast.hide();
+          // skipInProgress will be reset by observeShort when new video loads
+          setTimeout(() => {
+            observeShort(true);
+          }, 1000);
           return;
         }
         console.log('[YTShortAutoScroll] Next button found, clicking:', btn);
@@ -435,14 +446,7 @@ function scrollToNextShort() {
           console.log('[YTShortAutoScroll] Moved to next short. Will re-attach listeners.');
           setTimeout(() => {
             Toast.hide();
-            // Only re-attach listeners if the video src has changed (i.e., not already skipped by user/ad-blocker)
-            const videoAfter = document.querySelector('video');
-            if (videoAfter && videoAfter.src !== prevSrc) {
-              console.log('[YTShortAutoScroll] Re-attaching listeners for new video.');
-              observeShort();
-            } else {
-              console.log('[YTShortAutoScroll] Video src unchanged after skip, not re-attaching listeners.');
-            }
+            observeShort(true);
           }, 1000); // Wait for next video to load and hide toast
         }, 1000); // 1 second delay before moving to next
         return;
