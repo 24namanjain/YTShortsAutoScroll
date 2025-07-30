@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const focusToggle = document.getElementById('focusToggle');
   const hoverToggle = document.getElementById('hoverToggle');
   const commentsToggle = document.getElementById('commentsToggle');
+  const arrowCommentsToggle = document.getElementById('arrowCommentsToggle');
 
   /**
    * Loads extension settings from chrome.storage and updates the popup UI toggles.
@@ -21,14 +22,32 @@ document.addEventListener('DOMContentLoaded', () => {
       enabled: true, 
       onlyWhenFocused: false, 
       pauseOnHover: true, 
-      pauseOnComments: true 
+      pauseOnComments: true,
+      enableArrowComments: true
     }, (data) => {
       enableToggle.checked = data.enabled;
       focusToggle.checked = data.onlyWhenFocused;
       hoverToggle.checked = data.pauseOnHover;
       commentsToggle.checked = data.pauseOnComments;
+      arrowCommentsToggle.checked = data.enableArrowComments;
     });
   }
+  /**
+   * Handles the left/right arrow comments toggle change event.
+   * Updates chrome.storage and notifies the content script.
+   * @function
+   */
+  function onArrowCommentsToggleChange() {
+    const enableArrowComments = arrowCommentsToggle.checked;
+    chrome.storage.sync.set({ enableArrowComments });
+    // Notify content script to update immediately
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]) {
+        chrome.tabs.sendMessage(tabs[0].id, { type: 'UPDATE_SETTINGS', enableArrowComments });
+      }
+    });
+  }
+  arrowCommentsToggle.addEventListener('change', onArrowCommentsToggleChange);
   loadSettings();
 
   /**
