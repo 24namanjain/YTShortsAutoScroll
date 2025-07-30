@@ -1,51 +1,46 @@
-// YouTube Shorts Auto-Scroll Content Script
-// -----------------------------------------
-// This script auto-scrolls to the next YouTube Short when the current one ends or the progress bar is full.
-// It supports pausing on hover, only auto-scrolling when the tab is focused, and respects the comments panel.
-// Fun toast notifications are shown for user feedback.
+// == YouTube Shorts Auto-Scroll Content Script ==
+// ----------------------------------------------
+// Main features:
+//   - Auto-scrolls to the next Short when the current one ends or the progress bar is full
+//   - Pauses on hover, tab unfocus, or comments panel open
+//   - Keyboard shortcuts for comments panel (←/→)
+//   - Toast notifications for user feedback
+//   - Settings sync with popup UI
+
+// == 1. USER SETTINGS & STATE ==
 
 /**
- * UI-Controllable State Variables
- * These are controlled by the popup UI and chrome.storage. If you add a new setting,
- * update both this object and the popup UI.
- *
- * @property {boolean} enabled - Whether auto-scroll is enabled
- * @property {boolean} onlyWhenFocused - Only auto-scroll when tab is focused
- * @property {boolean} pauseOnHover - Pause auto-scroll on hover
- * @property {boolean} pauseOnComments - Pause auto-scroll when comments panel is open
- * @property {boolean} enableArrowComments - Enable ⬅️/➡️ to open/close comments
+ * == User Preferences ==
+ * Controlled by popup UI and chrome.storage. Update both here and in popup for new settings.
  */
 const userPreferences = {
-  enabled: true,
-  onlyWhenFocused: false,
-  pauseOnHover: true,
-  pauseOnComments: true,
-  enableArrowComments: true
+  enabled: true,              // Auto-scroll enabled
+  onlyWhenFocused: false,     // Only auto-scroll when tab is focused
+  pauseOnHover: true,         // Pause auto-scroll on hover
+  pauseOnComments: true,      // Pause when comments panel is open
+  enableArrowComments: true   // Enable ←/→ to open/close comments
 };
 
-// --- Internal State Variables ---
+// == Internal State ==
 let lastVideoSrc = null;           // Current video src
-let endedListener = null;          // Video ended event listener reference
+let endedListener = null;          // Video ended event listener
 let progressInterval = null;       // Progress bar polling interval
 let videoEndPoll = null;           // Video end polling interval
-let isPausedByHover = false;       // True if paused by hover
-let isPausedByFocus = false;       // True if paused by tab focus
-let hoverHandlers = { video: null, toast: null }; // Hover event handler references
+let isPausedByHover = false;       // Pause state for hover
+let isPausedByFocus = false;       // Pause state for tab focus
+let hoverHandlers = { video: null, toast: null }; // Hover event handler refs
 
-// --- Debug Utilities (for manual testing) ---
+// == Debug Utilities ==
 window._ytShortsAutoScrollDebug = {
   getSettings: () => ({ ...userPreferences }),
   setSetting: (key, value) => { userPreferences[key] = value; },
   observeShort
 };
 
-// --- Settings Sync and Messaging ---
-
-// --- Centralized Settings Update and Validation ---
+// == Settings Sync & Validation ==
 const defaultSettings = { ...userPreferences };
 
 function validateAndApplySettings(data) {
-  // Runtime validation for settings
   for (const key in defaultSettings) {
     if (typeof data[key] !== typeof defaultSettings[key]) {
       console.warn(`[YTShortAutoScroll] Invalid type for setting '${key}', using default:`, defaultSettings[key]);
@@ -203,14 +198,6 @@ const PauseResume = (() => {
   }
 
   /**
-   * Shows a pause toast for the current pause reason.
-   * (No-op: This is now handled by pause() and resume() directly. Kept for API compatibility.)
-   */
-  function showPauseToast() {
-    // No-op: handled by pause() and resume() to avoid duplicate toasts.
-  }
-
-  /**
    * Attaches hover listeners to the video and toast to pause/resume auto-scroll on hover.
    * Removes previous listeners before attaching new ones.
    */
@@ -251,7 +238,7 @@ const PauseResume = (() => {
     }
   }
 
-  return { pause, resume, isPaused, showPauseToast, setupHoverPause };
+  return { pause, resume, isPaused, setupHoverPause };
 })();
 
 // --- Focus Pause Module ---
@@ -433,6 +420,14 @@ function scrollToNextShort() {
       console.log(`[YTShortAutoScroll] Attempt ${attempts + 1}: #navigation-button-down found.`);
       const btn = navDown.querySelector('button[aria-label="Next video"]');
       if (btn) {
+        const prevSrc = lastVideoSrc;
+        // If the video src has already changed (ad-blocker/user skip), do not click Next or re-attach
+        const video = document.querySelector('video');
+        if (video && video.src !== prevSrc) {
+          console.log('[YTShortAutoScroll] Video already changed (likely by ad-blocker/user), skipping Next click and not re-attaching listeners.');
+          Toast.hide();
+          return;
+        }
         console.log('[YTShortAutoScroll] Next button found, clicking:', btn);
         Toast.show('🚀 Zooming to the next Short!', 2000);
         setTimeout(() => {
@@ -440,8 +435,14 @@ function scrollToNextShort() {
           console.log('[YTShortAutoScroll] Moved to next short. Will re-attach listeners.');
           setTimeout(() => {
             Toast.hide();
-            console.log('[YTShortAutoScroll] Re-attaching listeners for new video.');
-            observeShort();
+            // Only re-attach listeners if the video src has changed (i.e., not already skipped by user/ad-blocker)
+            const videoAfter = document.querySelector('video');
+            if (videoAfter && videoAfter.src !== prevSrc) {
+              console.log('[YTShortAutoScroll] Re-attaching listeners for new video.');
+              observeShort();
+            } else {
+              console.log('[YTShortAutoScroll] Video src unchanged after skip, not re-attaching listeners.');
+            }
           }, 1000); // Wait for next video to load and hide toast
         }, 1000); // 1 second delay before moving to next
         return;
@@ -461,12 +462,52 @@ function scrollToNextShort() {
 }
 
 
-// --- Toast Notification Module (Accessible, Encapsulated) ---
+// == Toast Notification Module ==
 const Toast = (() => {
+  // --- Helper: Set all toast styles ---
+  function applyToastStyles(toast) {
+    Object.assign(toast.style, {
+      position: 'fixed',
+      bottom: '32px',
+      right: '32px',
+      left: 'auto',
+      transform: 'none',
+      minWidth: '180px',
+      maxWidth: '70vw',
+      padding: '12px 28px',
+      borderRadius: '18px',
+      fontSize: '1em',
+      fontWeight: '500',
+      letterSpacing: '0.01em',
+      zIndex: '99999',
+      boxShadow: '0 6px 32px 0 rgba(31, 38, 135, 0.18)',
+      backdropFilter: 'blur(18px) saturate(180%)',
+      webkitBackdropFilter: 'blur(18px) saturate(180%)',
+      display: 'block',
+      transition: 'opacity 0.3s cubic-bezier(.4,0,.2,1)',
+      opacity: '0',
+      pointerEvents: 'none',
+      background: 'var(--yt-short-autoscroll-toast-bg, rgba(255,255,255,0.38))',
+      color: 'var(--yt-short-autoscroll-toast-fg, #222)',
+      border: '1.5px solid var(--yt-short-autoscroll-toast-border, rgba(255,255,255,0.45))'
+    });
+  }
+
+  // --- Helper: Adapt toast to theme ---
+  function adaptToastTheme(toast) {
+    const setTheme = () => {
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      toast.style.setProperty('--yt-short-autoscroll-toast-bg', isDark ? 'rgba(30,32,40,0.38)' : 'rgba(255,255,255,0.38)');
+      toast.style.setProperty('--yt-short-autoscroll-toast-fg', isDark ? '#fff' : '#23272f');
+      toast.style.setProperty('--yt-short-autoscroll-toast-border', isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.45)');
+    };
+    setTheme();
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', setTheme);
+  }
+
   /**
-   * Shows a toast message in the bottom right of the screen.
-   * Creates the toast element if it doesn't exist, and adapts to light/dark theme.
-   * @param {string} message - The message to display in the toast.
+   * Show a toast message in the bottom right of the screen.
+   * @param {string} message - The message to display.
    * @param {number} [timeout] - Optional timeout in ms to auto-hide the toast.
    */
   function show(message, timeout) {
@@ -476,40 +517,9 @@ const Toast = (() => {
       toast.id = 'yt-short-autoscroll-toast';
       toast.setAttribute('role', 'status');
       toast.setAttribute('aria-live', 'polite');
-      toast.style.position = 'fixed';
-      toast.style.bottom = '32px';
-      toast.style.right = '32px';
-      toast.style.left = 'auto';
-      toast.style.transform = 'none';
-      toast.style.minWidth = '180px';
-      toast.style.maxWidth = '70vw';
-      toast.style.padding = '12px 28px';
-      toast.style.borderRadius = '18px';
-      toast.style.fontSize = '1em';
-      toast.style.fontWeight = '500';
-      toast.style.letterSpacing = '0.01em';
-      toast.style.zIndex = '99999';
-      toast.style.boxShadow = '0 6px 32px 0 rgba(31, 38, 135, 0.18)';
-      toast.style.backdropFilter = 'blur(18px) saturate(180%)';
-      toast.style.webkitBackdropFilter = 'blur(18px) saturate(180%)';
-      toast.style.display = 'block';
-      toast.style.transition = 'opacity 0.3s cubic-bezier(.4,0,.2,1)';
-      toast.style.opacity = '0';
-      toast.style.pointerEvents = 'none';
-      toast.style.background = 'var(--yt-short-autoscroll-toast-bg, rgba(255,255,255,0.38))';
-      toast.style.color = 'var(--yt-short-autoscroll-toast-fg, #222)';
-      toast.style.border = '1.5px solid var(--yt-short-autoscroll-toast-border, rgba(255,255,255,0.45))';
-      setTimeout(() => { toast.style.opacity = '1'; }, 10);
+      applyToastStyles(toast);
       document.body.appendChild(toast);
-      // Theme adaptation
-      const setTheme = () => {
-        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        toast.style.setProperty('--yt-short-autoscroll-toast-bg', isDark ? 'rgba(30,32,40,0.38)' : 'rgba(255,255,255,0.38)');
-        toast.style.setProperty('--yt-short-autoscroll-toast-fg', isDark ? '#fff' : '#23272f');
-        toast.style.setProperty('--yt-short-autoscroll-toast-border', isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.45)');
-      };
-      setTheme();
-      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', setTheme);
+      adaptToastTheme(toast);
     }
     toast.textContent = message;
     toast.style.display = 'block';
@@ -518,8 +528,9 @@ const Toast = (() => {
       setTimeout(hide, timeout);
     }
   }
+
   /**
-   * Hides the toast notification if it is visible.
+   * Hide the toast notification if it is visible.
    */
   function hide() {
     const toast = document.getElementById('yt-short-autoscroll-toast');
@@ -528,6 +539,7 @@ const Toast = (() => {
       setTimeout(() => { toast.style.display = 'none'; }, 350);
     }
   }
+
   return { show, hide };
 })();
 
