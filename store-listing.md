@@ -42,13 +42,26 @@ Transform your YouTube Shorts experience with this intelligent auto-scroller tha
 - Settings persist across sessions  
 - Works with YouTube’s dynamic interface  
 
-## 🆕 What's New in Version 1.1.0 (2025-05-29)
+## 🆕 What's New in Version 1.1.1 (2025-01-27)
 
-### Added
-- Double-skip prevention: Only one skip per video, even if ads or user actions advance the video
-- Keyboard shortcuts: ➡️ Right arrow opens comments, ⬅️ Left arrow closes comments
-- Customizable toast duration with auto-hide (default: 2s)
-- Improved detection of the comments button
+### 🔧 Bug Fixes & Improvements
+- **Fixed auto-scroll not triggering** - Resolved issue where next video wasn't being triggered properly
+- **Improved ad-blocker handling** - Better handling when ad-blockers skip ads to prevent double-skipping
+- **Enhanced debugging** - Added comprehensive logging for easier troubleshooting
+- **Better timing** - Improved video change detection with better timing and fallback mechanisms
+
+### 🎯 Key Features
+- **Smart Auto-Scroll:** Automatically moves to the next Short when videos end
+- **Keyboard Shortcuts:** Use ←/→ arrows to open/close comments
+- **Smart Pause Options:** Pause on hover, comments, or tab focus
+- **Beautiful UI:** Clean Material Design popup with customizable settings
+- **Ad-Blocker Compatible:** Works seamlessly with ad-blockers
+
+---
+
+> Version: **1.1.1**  
+> License: Creative Commons Attribution-NonCommercial 4.0 International Public License (CC BY-NC 4.0)  
+> Author: Naman Jain  
 
 ## 🛡️ Privacy Policy
 
@@ -57,9 +70,3 @@ This extension does **not** collect, store, or transmit any personal data. It on
 ## 📬 Support
 
 For issues or feature requests, open an issue on the [GitHub repository](https://github.com/24namanjain/YTShortsAutoScroll) or contact via the Chrome Web Store support tab.
-
----
-
-> Version: **1.1.0**  
-> License: Creative Commons Attribution-NonCommercial 4.0 International Public License (CC BY-NC 4.0)  
-> Author: Naman Jain  

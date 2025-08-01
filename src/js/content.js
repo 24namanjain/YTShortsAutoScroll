@@ -54,7 +54,9 @@ function validateAndApplySettings(data) {
 
 function updateSettingsFromStorage(callback) {
   chrome.storage.sync.get(defaultSettings, (data) => {
+    console.log('[YTShortAutoScroll] Loading settings from storage:', data);
     validateAndApplySettings(data);
+    console.log('[YTShortAutoScroll] Settings after validation:', { ...userPreferences });
     if (typeof callback === 'function') callback();
     if (userPreferences.enabled) observeShort(true);
   });
@@ -76,9 +78,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     }
   }
   if (msg.type === 'UPDATE_SETTINGS') {
+    console.log('[YTShortAutoScroll] Received UPDATE_SETTINGS message:', msg);
     // Only update if changed
     for (const key in defaultSettings) {
       if (typeof msg[key] !== 'undefined' && userPreferences[key] !== msg[key]) {
+        console.log('[YTShortAutoScroll] Updating setting:', key, 'from', userPreferences[key], 'to', msg[key]);
         userPreferences[key] = msg[key];
         changed = true;
       }
@@ -255,38 +259,101 @@ const PauseResume = (() => {
 // --- Arrow Key Comments Control Module ---
 (function ArrowKeyCommentsModule() {
   document.addEventListener('keydown', function(e) {
-    if (!userPreferences.enableArrowComments) return;
+    console.log('[YTShortAutoScroll] Arrow key pressed:', e.key, 'enableArrowComments:', userPreferences.enableArrowComments);
+    if (!userPreferences.enableArrowComments) {
+      console.log('[YTShortAutoScroll] Arrow comments disabled, ignoring key press');
+      return;
+    }
     // Ignore if typing in input/textarea or using modifier keys
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.ctrlKey || e.altKey || e.metaKey) return;
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.ctrlKey || e.altKey || e.metaKey) {
+      console.log('[YTShortAutoScroll] Ignoring key press in input/textarea or with modifier keys');
+      return;
+    }
     // Right Arrow: Open comments
     if (e.key === 'ArrowRight') {
+      console.log('[YTShortAutoScroll] Right arrow pressed, checking if comments panel is open');
       if (!isCommentsPanelOpen()) {
-        // Try to find and click the comments button
-        let commentsBtn = document.querySelector('#comments-button button')
-          || document.querySelector('button[aria-label^="View"][aria-label$="comments"]')
-          || document.querySelector('button[aria-label="Comments"], button[aria-label="Show comments"]');
+        console.log('[YTShortAutoScroll] Comments panel not open, trying to find comments button');
+        // Try multiple selectors for comments button
+        const possibleSelectors = [
+          '#comments-button button',
+          'button[aria-label^="View"][aria-label$="comments"]',
+          'button[aria-label="Comments"]',
+          'button[aria-label="Show comments"]',
+          'button[aria-label*="comment"]',
+          'button[aria-label*="Comment"]',
+          'ytd-button-renderer[aria-label*="comment"]',
+          'ytd-button-renderer[aria-label*="Comment"]'
+        ];
+        
+        let commentsBtn = null;
+        for (const selector of possibleSelectors) {
+          const found = document.querySelector(selector);
+          if (found) {
+            console.log('[YTShortAutoScroll] Found comments button with selector:', selector, found);
+            commentsBtn = found;
+            break;
+          }
+        }
+        
         if (commentsBtn) {
+          console.log('[YTShortAutoScroll] Comments button found, clicking:', commentsBtn);
           commentsBtn.click();
           Toast.show('💬 Opening comments...', 2000);
         } else {
+          console.log('[YTShortAutoScroll] Comments button not found with any selector');
+          // Log all buttons on the page for debugging
+          const allButtons = document.querySelectorAll('button');
+          console.log('[YTShortAutoScroll] All buttons on page:', Array.from(allButtons).map(b => ({
+            ariaLabel: b.getAttribute('aria-label'),
+            id: b.id,
+            className: b.className,
+            text: b.textContent.trim()
+          })));
           Toast.show('❓ Comments button not found', 2000);
         }
+      } else {
+        console.log('[YTShortAutoScroll] Comments panel already open');
       }
     }
     // Left Arrow: Close comments
     if (e.key === 'ArrowLeft') {
+      console.log('[YTShortAutoScroll] Left arrow pressed, checking if comments panel is open');
       if (isCommentsPanelOpen()) {
-        // Try to find and click the close button in the comments panel
-        let closeBtn = document.querySelector('ytd-engagement-panel-section-list-renderer[shorts-panel][visibility="ENGAGEMENT_PANEL_VISIBILITY_EXPANDED"] button[aria-label="Close"]')
-          || document.querySelector('#comments-button button')
-          || document.querySelector('button[aria-label^="View"][aria-label$="comments"]')
-          || document.querySelector('button[aria-label="Comments"], button[aria-label="Show comments"]');
+        console.log('[YTShortAutoScroll] Comments panel is open, trying to find close button');
+        // Try multiple selectors for close button
+        const possibleCloseSelectors = [
+          'ytd-engagement-panel-section-list-renderer[shorts-panel][visibility="ENGAGEMENT_PANEL_VISIBILITY_EXPANDED"] button[aria-label="Close"]',
+          '#comments-button button',
+          'button[aria-label^="View"][aria-label$="comments"]',
+          'button[aria-label="Comments"]',
+          'button[aria-label="Show comments"]',
+          'button[aria-label="Hide comments"]',
+          'button[aria-label="Close comments"]',
+          'button[aria-label*="close"]',
+          'button[aria-label*="Close"]'
+        ];
+        
+        let closeBtn = null;
+        for (const selector of possibleCloseSelectors) {
+          const found = document.querySelector(selector);
+          if (found) {
+            console.log('[YTShortAutoScroll] Found close button with selector:', selector, found);
+            closeBtn = found;
+            break;
+          }
+        }
+        
         if (closeBtn) {
+          console.log('[YTShortAutoScroll] Close button found, clicking:', closeBtn);
           closeBtn.click();
           Toast.show('❌ Closing comments...', 2000);
         } else {
+          console.log('[YTShortAutoScroll] Close button not found with any selector');
           Toast.show('❓ Close button not found', 2000);
         }
+      } else {
+        console.log('[YTShortAutoScroll] Comments panel not open');
       }
     }
   }, true);
@@ -300,41 +367,35 @@ function observeShort(force = false) {
     console.error('[YTShortAutoScroll] No video element found.');
     return;
   }
-  // Use video src to detect new video
-  if (!force && video.src === lastVideoSrc) {
-    // Already observing this video, do nothing
+  
+  // Check if this is a new video
+  if (!force && !isNewVideo(video)) {
+    console.log('[YTShortAutoScroll] Same video, skipping setup.');
     return;
   }
+  
   console.log('[YTShortAutoScroll] New video detected, setting up observer.');
+  
+  // Update tracking variables
   lastVideoSrc = video.src;
   skipInProgress = false; // Reset skip flag for new video
 
-  // Remove previous listeners and intervals
-  if (endedListener) {
-    video.removeEventListener('ended', endedListener);
-    endedListener = null;
-  }
-  if (progressInterval) {
-    clearInterval(progressInterval);
-    progressInterval = null;
-    console.log('[YTShortAutoScroll] Cleared previous progress interval.');
-  }
-  if (videoEndPoll) {
-    clearInterval(videoEndPoll);
-    videoEndPoll = null;
-    console.log('[YTShortAutoScroll] Cleared previous video end poll.');
-  }
+  // Clean up previous listeners and intervals
+  cleanupCurrentVideo();
 
   // Handler to move to next short and cleanup
   const moveNext = (reason) => {
+    console.log('[YTShortAutoScroll] moveNext called with reason:', reason);
     if (skipInProgress) {
       console.log('[YTShortAutoScroll] Skip already in progress, ignoring moveNext.');
       return;
     }
+    console.log('[YTShortAutoScroll] Setting skipInProgress to true');
     skipInProgress = true;
     if (endedListener) {
       video.removeEventListener('ended', endedListener);
       endedListener = null;
+      console.log('[YTShortAutoScroll] Removed ended event listener');
     }
     if (progressInterval) {
       clearInterval(progressInterval);
@@ -347,9 +408,18 @@ function observeShort(force = false) {
       console.log('[YTShortAutoScroll] Cleared video end poll after', reason);
     }
     if (!PauseResume.isPaused()) {
-      scrollToNextShort();
+      console.log('[YTShortAutoScroll] Auto-scroll not paused, calling scrollToNextShort');
+      // Add a small delay to let ad-blockers finish their work
+      setTimeout(() => {
+        scrollToNextShort();
+      }, 500);
     } else {
-      console.log('[YTShortAutoScroll] Auto-scroll paused, skipping scrollToNextShort.');
+      console.log('[YTShortAutoScroll] Auto-scroll paused, skipping scrollToNextShort. Pause reasons:', {
+        isPausedByHover,
+        isPausedByFocus,
+        pauseOnComments: userPreferences.pauseOnComments,
+        isCommentsPanelOpen: isCommentsPanelOpen()
+      });
     }
   };
 
@@ -363,23 +433,64 @@ function observeShort(force = false) {
 
   // Poll the progress bar for completion (width >= 99%)
   progressInterval = setInterval(() => {
-    if (PauseResume.isPaused()) return;
+    if (PauseResume.isPaused()) {
+      console.log('[YTShortAutoScroll] Auto-scroll paused, skipping progress check');
+      return;
+    }
     const played = document.querySelector('.ytProgressBarLineProgressBarPlayed');
     if (played) {
       const width = parseFloat(played.style.width);
+      console.log('[YTShortAutoScroll] Progress bar width:', width, 'target: >= 99');
       if (!isNaN(width) && width >= 99) {
         console.log('[YTShortAutoScroll] Progress bar at or above 99%, moving to next short.');
         moveNext('progress bar');
+      }
+    } else {
+      console.log('[YTShortAutoScroll] Progress bar element not found');
+      // Try alternative selectors
+      const altSelectors = [
+        '.ytProgressBarLineProgressBarPlayed',
+        '[class*="progress"]',
+        '[class*="Progress"]',
+        '.ytp-progress-bar .ytp-play-progress'
+      ];
+      for (const selector of altSelectors) {
+        const found = document.querySelector(selector);
+        if (found) {
+          console.log('[YTShortAutoScroll] Found progress bar with selector:', selector, found);
+          break;
+        }
       }
     }
   }, 500);
 
   // Fallback: Poll for video end (in case 'ended' event is missed)
   videoEndPoll = setInterval(() => {
-    if (PauseResume.isPaused()) return;
-    if (video.duration && video.currentTime && (video.duration - video.currentTime < 0.5)) {
-      console.log('[YTShortAutoScroll] Video end detected by polling, moving to next short.');
-      moveNext('video end poll');
+    if (PauseResume.isPaused()) {
+      console.log('[YTShortAutoScroll] Auto-scroll paused, skipping video end poll');
+      return;
+    }
+    if (video.duration && video.currentTime) {
+      const timeLeft = video.duration - video.currentTime;
+      console.log('[YTShortAutoScroll] Video time left:', timeLeft, 'seconds, target: < 0.5');
+      if (timeLeft < 0.5) {
+        console.log('[YTShortAutoScroll] Video end detected by polling, moving to next short.');
+        moveNext('video end poll');
+      }
+    } else {
+      console.log('[YTShortAutoScroll] Video duration or currentTime not available:', {
+        duration: video.duration,
+        currentTime: video.currentTime
+      });
+    }
+    
+    // Check if video has changed unexpectedly (ad-blocker skip)
+    if (shouldSkipDueToAdBlocker()) {
+      console.log('[YTShortAutoScroll] Unexpected video change detected, likely ad-blocker skip');
+      skipInProgress = false;
+      setTimeout(() => {
+        observeShort(true);
+      }, 1000);
     }
   }, 500);
 
@@ -392,7 +503,10 @@ function observeShort(force = false) {
  * @returns {boolean}
  */
 function isCommentsPanelOpen() {
-  return !!document.querySelector('ytd-engagement-panel-section-list-renderer[shorts-panel][visibility="ENGAGEMENT_PANEL_VISIBILITY_EXPANDED"]');
+  const commentsPanel = document.querySelector('ytd-engagement-panel-section-list-renderer[shorts-panel][visibility="ENGAGEMENT_PANEL_VISIBILITY_EXPANDED"]');
+  const isOpen = !!commentsPanel;
+  console.log('[YTShortAutoScroll] Checking if comments panel is open:', isOpen, commentsPanel);
+  return isOpen;
 }
 
 // --- Main Scroll Logic ---
@@ -402,14 +516,28 @@ function isCommentsPanelOpen() {
  * Retries for up to 6 seconds if the button is not found.
  */
 function scrollToNextShort() {
+  console.log('[YTShortAutoScroll] scrollToNextShort called.');
   let attempts = 0;
-  const maxAttempts = 12; // 12 * 500ms = 6 seconds
+  const maxAttempts = 15; // Increased from 12 to 15 attempts
   let waitingForComments = false;
 
   // Tries to find and click the Next button, or waits for comments panel to close.
   function tryClick() {
+    console.log('[YTShortAutoScroll] tryClick attempt:', attempts + 1);
+    
+    // Check if ad-blocker has already advanced the video
+    if (shouldSkipDueToAdBlocker()) {
+      console.log('[YTShortAutoScroll] Ad-blocker detected, skipping manual click and re-attaching listeners');
+      skipInProgress = false;
+      setTimeout(() => {
+        observeShort(true);
+      }, 1000);
+      return;
+    }
+    
     if (userPreferences.pauseOnComments && isCommentsPanelOpen()) {
       if (!waitingForComments) {
+        console.log('[YTShortAutoScroll] Comments panel open, pausing auto-scroll');
         PauseResume.pause('comments');
         waitingForComments = true;
       }
@@ -417,28 +545,36 @@ function scrollToNextShort() {
       return;
     } else if (waitingForComments) {
       // Comments panel just closed
+      console.log('[YTShortAutoScroll] Comments panel just closed');
       waitingForComments = false;
       Toast.hide();
     }
-    const navDown = document.getElementById('navigation-button-down');
+    
+    // Try multiple selectors for the navigation button - be more specific to avoid interfering with keyboard navigation
+    const navDown = document.getElementById('navigation-button-down') || 
+                   document.querySelector('[data-a11y-order="2"]') ||
+                   document.querySelector('button[aria-label="Next video"]')?.closest('[data-a11y-order]');
+    
     if (!navDown) {
-      console.log(`[YTShortAutoScroll] Attempt ${attempts + 1}: #navigation-button-down not found.`);
+      console.log(`[YTShortAutoScroll] Attempt ${attempts + 1}: Navigation button not found.`);
+      // Log all elements with data-a11y-order for debugging
+      const allA11yElements = document.querySelectorAll('[data-a11y-order]');
+      console.log('[YTShortAutoScroll] All elements with data-a11y-order:', Array.from(allA11yElements).map(el => ({
+        order: el.getAttribute('data-a11y-order'),
+        tagName: el.tagName,
+        ariaLabel: el.getAttribute('aria-label')
+      })));
     } else {
-      console.log(`[YTShortAutoScroll] Attempt ${attempts + 1}: #navigation-button-down found.`);
-      const btn = navDown.querySelector('button[aria-label="Next video"]');
+      console.log(`[YTShortAutoScroll] Attempt ${attempts + 1}: Navigation button found:`, navDown);
+      const btn = navDown.querySelector('button[aria-label="Next video"]') || 
+                 navDown.querySelector('button');
+      
       if (btn) {
+        console.log('[YTShortAutoScroll] Next button found:', btn);
         const prevSrc = lastVideoSrc;
-        // If the video src has already changed (ad-blocker/user skip), do not click Next
         const video = document.querySelector('video');
-        if (video && video.src !== prevSrc) {
-          console.log('[YTShortAutoScroll] Video already changed (likely by ad-blocker/user), skipping Next click but re-attaching listeners.');
-          Toast.hide();
-          // skipInProgress will be reset by observeShort when new video loads
-          setTimeout(() => {
-            observeShort(true);
-          }, 1000);
-          return;
-        }
+        
+        // Always click the button to ensure next video is triggered
         console.log('[YTShortAutoScroll] Next button found, clicking:', btn);
         Toast.show('🚀 Zooming to the next Short!', 2000);
         setTimeout(() => {
@@ -452,16 +588,21 @@ function scrollToNextShort() {
         return;
       } else {
         const allBtns = Array.from(navDown.querySelectorAll('button'));
-        console.log('[YTShortAutoScroll] No button[aria-label="Next video"] found. Buttons inside #navigation-button-down:', allBtns.map(b => b.outerHTML));
+        console.log('[YTShortAutoScroll] No button found. Buttons inside navigation:', allBtns.map(b => ({
+          ariaLabel: b.getAttribute('aria-label'),
+          text: b.textContent.trim(),
+          className: b.className
+        })));
       }
     }
     if (++attempts < maxAttempts) {
       setTimeout(tryClick, 500);
     } else {
       console.log('[YTShortAutoScroll] Next button not found after retries.');
+      Toast.show('❌ Could not find next button');
+      setTimeout(() => Toast.hide(), 2000);
     }
   }
-  console.log('[YTShortAutoScroll] scrollToNextShort called.');
   tryClick();
 }
 
@@ -556,18 +697,83 @@ function setupShortsMutationObserver() {
   const shortsArea = document.querySelector('ytd-reel-video-renderer')?.parentElement
     || document.querySelector('ytd-reel-video-renderer')
     || document.body;
+  
   if (!shortsArea) {
     console.log('[YTShortAutoScroll] Shorts area not found, retrying...');
     setTimeout(setupShortsMutationObserver, 1000);
     return;
   }
+  
   console.log('[YTShortAutoScroll] Setting up MutationObserver on Shorts area.');
-  const observer = new MutationObserver(() => {
-    observeShort(true); // Always force re-attach
+  const observer = new MutationObserver((mutations) => {
+    // Check if any mutations are relevant to video changes
+    const hasRelevantChanges = mutations.some(mutation => {
+      return mutation.type === 'childList' && 
+             (mutation.target.tagName === 'YTD-REEL-VIDEO-RENDERER' ||
+              mutation.addedNodes.length > 0 ||
+              mutation.removedNodes.length > 0);
+    });
+    
+    if (hasRelevantChanges) {
+      console.log('[YTShortAutoScroll] DOM changes detected, re-observing short.');
+      setTimeout(() => observeShort(true), 100); // Small delay to ensure DOM is stable
+    }
   });
-  observer.observe(shortsArea, { childList: true, subtree: true });
+  
+  observer.observe(shortsArea, { 
+    childList: true, 
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['src', 'href']
+  });
+  
   // Initial call
   observeShort(true);
 }
+
+// Helper functions for video detection
+function isNewVideo(video) {
+  if (!video) return false;
+  const currentSrc = video.src;
+  if (currentSrc !== lastVideoSrc) {
+    console.log('[YTShortAutoScroll] Video src changed:', lastVideoSrc, '->', currentSrc);
+    // Reset skipInProgress when a new video is detected
+    skipInProgress = false;
+    return true;
+  }
+  return false;
+}
+
+// Helper function to check if we should skip due to ad-blocker
+function shouldSkipDueToAdBlocker() {
+  const video = document.querySelector('video');
+  if (!video || !lastVideoSrc) return false;
+  
+  // If the video src has changed, it might be due to ad-blocker
+  if (video.src !== lastVideoSrc) {
+    console.log('[YTShortAutoScroll] Video changed, likely due to ad-blocker');
+    return true;
+  }
+  return false;
+}
+
+function cleanupCurrentVideo() {
+  console.log('[YTShortAutoScroll] Cleaning up current video');
+  if (endedListener && lastVideoSrc) {
+    const video = document.querySelector('video');
+    if (video) video.removeEventListener('ended', endedListener);
+    endedListener = null;
+  }
+  if (progressInterval) { 
+    clearInterval(progressInterval); 
+    progressInterval = null; 
+  }
+  if (videoEndPoll) { 
+    clearInterval(videoEndPoll); 
+    videoEndPoll = null; 
+  }
+  lastVideoSrc = null;
+}
+
 window.setupShortsMutationObserver = setupShortsMutationObserver;
-setupShortsMutationObserver();
+setupShortsMutationObserver(); 

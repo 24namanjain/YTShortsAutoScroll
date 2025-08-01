@@ -5,33 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2025-01-27
+
+### Fixed
+- Fixed auto-scroll not triggering next video due to conditional video change check
+- Improved ad-blocker skip handling to prevent double-skipping when ads are skipped
+- Enhanced video change detection with better timing and fallback mechanisms
+- Added comprehensive debugging for easier troubleshooting
+
+### Changed
+- Removed conditional video change check that was preventing next button clicks
+- Added 500ms delay before scrollToNextShort to let ad-blockers finish their work
+- Improved skipInProgress flag management for better state handling
+- Enhanced console logging for better debugging experience
+
+## [1.1.0] - 2025-07-23
+
+### Added
+- Arrow key comments control: Use ←/→ to open/close comments panel
+- Info section in popup with tips and features
+- Version display in popup UI
+- Enhanced UI styling with better dark mode support
+
+### Changed
+- Updated version to 1.1.0 across all files
+- Improved popup UI with better organization and styling
+- Enhanced CSS with better responsive design
+
 ## [1.0.0] - 2025-07-23
 
 ### Added
 - Initial release of YouTube Shorts Auto-Scroller
 - Auto-scroll functionality when videos end or progress bar completes
-- Smart pause on hover and tab focus
-- Comments panel detection and pause
-- Material Design popup UI with settings
+- Pause on hover functionality
+- Pause when tab is not focused
+- Pause when comments panel is open
 - Toast notifications for user feedback
-- Chrome storage for settings persistence
-- Manifest V3 compliance
-- Responsive design with glassy UI elements
-
-### Features
-- 🎬 Smart auto-scroll to next Short
-- ⏸️ Pause on hover functionality
-- 👁️ Tab focus awareness
-- 💬 Comments panel detection
-- 🎨 Beautiful Material Design UI
-- 🔄 Real-time settings sync
-- 🎪 Fun toast notifications
-
-### Technical
-- Chrome Extension Manifest V3
-- Content script injection
-- MutationObserver for DOM detection
+- Material Design popup UI
 - Chrome Storage API integration
+- MutationObserver for DOM detection
 - Service worker background script 
 
 
