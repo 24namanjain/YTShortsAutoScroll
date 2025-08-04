@@ -63,6 +63,7 @@ YTShortAutoScroll/
 - Handles YouTube's dynamic DOM
 - Smart pause on hover and tab focus
 - Comments panel detection
+- Double-skip prevention: Robust logic ensures only one skip per video, even if ads or user actions advance the video (prevents double-skipping with a skipInProgress flag)
 
 ### UI Components (popup.js/css/html)
 - Material Design switches

@@ -41,6 +41,9 @@ This extension is like having a personal assistant that knows exactly when you'r
 
 ### 🎯 Key Features
 - **🎬 Smart Auto-Scroll:** Jumps to the next Short when the video ends or progress bar completes
+- **🛡️ Double-Skip Prevention:** Robust logic ensures only one skip per video, even if ads or user actions advance the video (prevents double-skipping)
+- **� Keyboard Shortcuts:** Use right arrow to open comments, left arrow to close comments
+- **⏲️ Customizable Toast Duration:** Toast notifications now auto-hide after a set time (default 2s)
 - **🎪 Fun Toast Notifications:** Get a little celebration when it jumps to the next video
 - **⏸️ Smart Pause Options:** 
   - Pause on hover (optional)
@@ -88,6 +91,7 @@ This extension is like having a personal assistant that knows exactly when you'r
 - **Material Design** UI components
 - **Chrome Storage API** for settings persistence
 - **MutationObserver** for reliable DOM detection
+- **Double-skip prevention:** Uses a skipInProgress flag to ensure only one skip per video, even if ads or user actions advance the video
 - **Toast notifications** with adaptive dark/light mode
 
 ## 📄 License
